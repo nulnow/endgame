@@ -1,0 +1,366 @@
+<title>Endgame game</title>
+
+<style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.stats {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+
+    background-color: white;
+}
+
+#health {
+    position: absolute;
+    width: 400px;
+    background-color: red;
+}
+
+img {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+        
+</style>
+
+<canvas id="ctx" width="500" height="500" style="border: 1px solid black;"></canvas>
+<p class="stats">
+    <span>Score: <span id="score"></span></span>
+    <br>
+    <span>Health: <span id="health"></span></span>
+</p>
+
+<h1>Space - attack</h1>
+<h1>0..9 - speed</h1>
+
+<script>
+
+const
+    STOP = 0,
+    TOP = 1,
+    RIGHT = 2,
+    BOTTOM = 3,
+    LEFT = 4,
+    ENTER = 13,
+    W = 87,
+    A = 65,
+    S = 83,
+    D = 68,
+    SPACE = 32,
+    WIDTH = window.innerWidth,
+    HEIGHT = window.innerHeight
+
+const canvas = document.querySelector('#ctx')
+const ctx = document.querySelector('#ctx').getContext('2d')
+const scoreEl = document.getElementById('score')
+const healthEl = document.getElementById('health') 
+
+let wpImg = new Image()
+wpImg.src = 'wp.jpg'
+
+let playerImg = new Image(50, 50)
+playerImg.src = 'tor.png'
+
+let enemyImg = new Image(50, 50)
+enemyImg.src = 'tanos.png'
+
+let beerImg = new Image(50, 50)
+beerImg.src = 'beer.png'
+
+const player = {
+    name: 'С',
+    x: 50,
+    y: 50,
+    direction: STOP,
+    speed: 6,
+    hp: 100
+}
+
+let score = 0
+
+let enemys = [
+    {
+        name: 'Ж',
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50),
+        direction: Math.round(Math.random() * 4),
+        speed: 3
+    },
+    {
+        name: 'Ж',
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50),
+        direction: Math.round(Math.random() * 4),
+        speed: 3
+    },
+    {
+        name: 'Ж',
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50),
+        direction: Math.round(Math.random() * 4),
+        speed: 3
+    },
+    {
+        name: 'Ж',
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50),
+        direction: Math.round(Math.random() * 4),
+        speed: 3
+    },
+    {
+        name: 'Ж',
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50),
+        direction: Math.round(Math.random() * 4),
+        speed: 3
+    },
+    {
+        name: 'Ж',
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50),
+        direction: Math.round(Math.random() * 4),
+        speed: 3
+    }
+]
+
+let food = [
+    {
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50)
+    },
+    {
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50)
+    },
+    {
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50)
+    },
+    {
+        x: Math.round(Math.random() * 400 + 50),
+        y: Math.round(Math.random() * 400 + 50)
+    }
+]
+
+let bullets = []
+
+ctx.font = '30px Arial'
+
+let pause = false
+
+let frames = 0
+function update() {
+    frames++
+    if (pause) return
+
+    if (frames % 64 === 0) {
+        bullets.push({
+            x: player.x,
+            y: player.y,
+            direction: Math.round(Math.random() * 4),
+            speed: 9,
+            frames: 0
+        })
+        food.push({
+            x: Math.round(Math.random() * 400 + 50),
+            y: Math.round(Math.random() * 400 + 50)
+        })
+    }
+    if (frames % 32 === 0) {
+        enemys.push({
+            name: 'Ж',
+            x: Math.round(Math.random() * 400 + 50),
+            y: Math.round(Math.random() * 400 + 50),
+            direction: Math.round(Math.random() * 4),
+            speed: 3
+        })
+        
+    }
+
+    ctx.clearRect(0, 0, 500, 500)
+    ctx.drawImage(wpImg, 0, 0, 500, 500)
+
+    ctx.drawImage(playerImg, player.x, player.y, 50, 50)
+
+    move(player)
+    Array.from(bullets).forEach(bullet => {
+        bullet.frames++
+        if (bullet.frames > 100) {
+            bullets = bullets.filter(b => b !== bullet)
+        }
+        move(bullet)
+        ctx.save()
+        ctx.fillStyle = "red";
+        ctx.fillRect(bullet.x, bullet.y, 10, 10);
+        ctx.restore()
+    })
+
+    Array.from(enemys).forEach(enemy => {
+        move(enemy)
+        ctx.drawImage(enemyImg, enemy.x, enemy.y, 50, 50)
+
+        Array.from(bullets).forEach(bullet => {
+            if (calculatePointsLength(bullet, enemy) < 30) {
+                enemys = enemys.filter(e => e !== enemy)
+                bullets = bullets.filter(b => b !== bullet)
+            }
+        })
+
+        if (calculatePointsLength(player, enemy) < 30) {
+            player.hp -= 2
+
+            if (player.hp <= 0) {
+                showDeathScreen()
+            }
+        }
+    })
+
+    Array.from(food).forEach(f => {
+        console.log(f)
+        if (calculatePointsLength(player, f) < 30) {
+            food = food.filter(fd => f !== fd)
+            score++
+            player.hp += 10
+            if (player.hp > 100) player.hp = 100
+        }
+        ctx.drawImage(beerImg, f.x, f.y, 50, 50)
+    })
+
+    scoreEl.innerHTML = score
+    healthEl.innerHTML = player.hp
+
+    healthEl.style.width = 400 * (player.hp / 100)
+
+    if (food.length === 0) {
+        showWonScreen()
+    }
+}
+
+function showImg(src) {
+    const img = document.createElement('img')
+    img.setAttribute('src', src)
+    document.body.appendChild(img)
+}
+
+function showWonScreen() {
+    pause = true
+    showImg('https://image.shutterstock.com/image-illustration/you-won-button-260nw-84714082.jpg')
+}
+
+function showDeathScreen() {
+    pause = true
+    showImg('died.jpg')
+}
+
+function calculatePointsLength(p1, p2) {
+    return Math.sqrt(
+        Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)
+    );
+}
+
+function move(unit) {
+    switch (unit.direction) {
+
+        case TOP:
+            (unit.y > 50) && (unit.y -= unit.speed)
+            break
+
+        case RIGHT:
+            (unit.x < 450) && (unit.x += unit.speed)
+            break
+
+        case BOTTOM:
+            (unit.y < 450) && (unit.y += unit.speed)
+            break
+
+        case LEFT:
+            (unit.x > 50) && (unit.x -= unit.speed)
+            break
+    }
+}
+
+const loop = setInterval(update, 16)
+setInterval(() => {
+    enemys.forEach(enemy => {
+        enemy.direction = Math.round(Math.random() * 4)
+    })
+    
+}, 200)
+
+canvas.onclick = event => {
+    const { mouseX, mouseY } = event
+    bullets.push({
+        x: player.x,
+        y: player.y,
+        speed: 9,
+        direction: Math.round(Math.random() * 4)
+    })
+}
+
+document.onkeypress = function(event) {
+
+    switch (event.keyCode) {
+
+        case ENTER:
+            pause = !pause
+            break
+
+        default:
+            if (event.keyCode >= 48 && event.keyCode <= 57) {
+                player.speed = event.keyCode - 48
+            }
+            break
+    }
+}
+
+document.onkeydown = function(event) {
+    switch (event.keyCode) {
+        case W:
+            player.direction = TOP
+            break
+        
+        case A:
+            player.direction = LEFT
+            break
+
+        case S:
+            player.direction = BOTTOM
+            break
+
+        case D:
+            player.direction = RIGHT
+            break
+
+        case SPACE:
+            playerImg.src = 'ring.png'
+            setTimeout(() => {
+                playerImg.src = 'tor.png'
+            }, 200)
+            Array.from(enemys).forEach(enemy => {
+                if (calculatePointsLength(player, enemy) < 80) {
+                    enemys = enemys.filter(e => e !== enemy)
+                }
+            })
+            break
+    }
+}
+
+document.onkeyup = function(event) {
+    player.direction = STOP
+    
+}
+
+window.onload = function() {
+
+}
+
+</script>
